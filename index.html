@@ -1,77 +1,79 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <title>Capture and Upload Image</title>
+</head>
+<body>
 
-<body onload="getLocation()">
-    <div style="width:480px">
-        <iframe allow="fullscreen" frameBorder="0" height="480" src="https://giphy.com/embed/Al2Uzr6Rz4b5w2qWpE/video" width="480"></iframe>
-    </div>
-
-    <p id="demo"></p>
+    <h1>Capture Image from Camera</h1>
+    <video id="video" width="320" height="240" autoplay></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <br>
+    <button id="capture">Capture Image</button>
+    <button id="upload">Upload Image</button>
 
     <script>
-        const x = document.getElementById("demo");
+        // Access the device camera
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureButton = document.getElementById('capture');
+        const uploadButton = document.getElementById('upload');
+        let imageDataUrl = '';
 
-        // Function to get the user's location
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(showPosition, showError);
-            } else {
-                x.innerHTML = "Geolocation is not supported by this browser.";
+        // Start the video stream
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+            .then(function(stream) {
+                video.srcObject = stream;
+            })
+            .catch(function(err) {
+                console.log("Error: " + err);
+            });
+
+        // Capture image from video feed
+        captureButton.addEventListener('click', function() {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            imageDataUrl = canvas.toDataURL('image/png'); // Capture image as a Data URL
+        });
+
+        // Upload image to the server (backend PHP code)
+        uploadButton.addEventListener('click', function() {
+            if (!imageDataUrl) {
+                alert('Please capture an image first.');
+                return;
             }
-        }
 
-        // Function to show the position and send the data
-        function showPosition(position) {
-            // Get latitude and longitude
-            const latitude = position.coords.latitude;
-            const longitude = position.coords.longitude;
+            // Send the captured image to the backend
+            const formData = new FormData();
+            formData.append('image', dataURLtoBlob(imageDataUrl));
 
-            // Get the user agent (browser info)
-            const userAgent = navigator.userAgent;
+            fetch('https://your-backend-url.com/upload.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                alert('Image uploaded successfully!');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to upload image.');
+            });
+        });
 
-            // Get camera availability via the mediaDevices API
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(function(stream) {
-                    // Assuming camera access was granted
-                    const cameraAvailable = true;
-                    sendData(latitude, longitude, userAgent, cameraAvailable);
-                })
-                .catch(function(err) {
-                    // Camera access was denied or failed
-                    const cameraAvailable = false;
-                    sendData(latitude, longitude, userAgent, cameraAvailable);
-                });
-        }
+        // Helper function to convert Data URL to Blob
+        function dataURLtoBlob(dataURL) {
+            const byteString = atob(dataURL.split(',')[1]);
+            const arrayBuffer = new ArrayBuffer(byteString.length);
+            const uint8Array = new Uint8Array(arrayBuffer);
 
-        // Function to handle errors in getting geolocation
-        function showError(error) {
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    x.innerHTML = "User denied the request for Geolocation.";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    x.innerHTML = "Location information is unavailable.";
-                    break;
-                case error.TIMEOUT:
-                    x.innerHTML = "The request to get user location timed out.";
-                    break;
-                case error.UNKNOWN_ERROR:
-                    x.innerHTML = "An unknown error occurred.";
-                    break;
+            for (let i = 0; i < byteString.length; i++) {
+                uint8Array[i] = byteString.charCodeAt(i);
             }
-        }
- // Function to send data to the server
-        function sendData(latitude, longitude, userAgent, cameraAvailable) {
-            const xhttp = new XMLHttpRequest();
-            xhttp.open("POST", "save.php", true); // Use POST for better security
-            xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 
-            // Send the data to the server (parameters)
-            const data = `lat=${latitude}&long=${longitude}&user_agent=${encodeURIComponent(userAgent)}&camera_agent=${cameraAvailable}`;
-            xhttp.send(data);
+            return new Blob([uint8Array], { type: 'image/png' });
         }
     </script>
-
 </body>
-
 </html>
